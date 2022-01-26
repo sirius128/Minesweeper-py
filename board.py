@@ -74,22 +74,21 @@ class Board():
             for x, elem in enumerate(line):                 # x
                 self.blocks.add(Block(x, y, elem))          # ブロック管理用Spriteを追加する
     
-    def open_next(self, x, y, is_manual_open = False):      # ブロックをを開く関数。隣が空白なら連続して開ける
-        if not self.user_map[y][x] or is_manual_open:       # まだ空いていなかったら継続。手動で開けた時は開ける
+    def open_next(self, x, y, is_manual_open = False):      # ブロックを開く関数。隣が空白なら連続して開ける
+        if self.user_map[y][x] < 1 or is_manual_open:       # まだ空いていなかったら継続。手動で開けた時は開ける
             if not self.stage_map[y][x] == -1 or is_manual_open:   # 爆弾じゃなかったら継続。手動で開けた時も開ける
                 if x >= 0 and y >= 0 and x < self.NUM_WIDTH and y < self.NUM_HEIGHT:  # 参照先が範囲内なのを確認
-                    for sprite in self.blocks.sprites():
-                        if sprite.x == x and sprite.y == y:
-                            self.user_map = sprite.unflag(self.user_map)
-                            self.user_map = sprite.open(self.user_map)
-                            if sprite.is_flag:              # 自動で開けた時に、flagが立てられていた時の処理
-                                sprite.is_flag = False      # フラグを取る
+                    for sprite in self.blocks.sprites():    
+                        if sprite.x == x and sprite.y == y: # 該当のSpriteを特定
+                            if sprite.is_flag:              # 自動で開ける時に、flagが立てられていた時の処理
+                                self.user_map = sprite.unflag(self.user_map)    # フラグを取る
                                 self.flag_count -= 1        # フラグの数を1減らす
+                            self.user_map = sprite.open(self.user_map)          # 開ける
                             break
-                    if self.stage_map[y][x] == 0:
-                        for j in range(-1, 2):          # y
-                            for i in range(-1, 2):      # x
-                                if not (i == 0 and j == 0):   # 中心以外の場所
+                    if self.stage_map[y][x] == 0:           # ブロックが空白だったら
+                        for j in range(-1, 2):              # y
+                            for i in range(-1, 2):          # x
+                                if not (i == 0 and j == 0): # 中心以外の場所
                                     if x+i >= 0 and y+j >= 0 and x+i < self.NUM_WIDTH and y+j < self.NUM_HEIGHT:  # 参照先が範囲内
                                         # print("call open_next()", x+i, y+j)
                                         self.open_next(x+i, y+j)    # 指定した座標を開ける
@@ -101,7 +100,7 @@ class Board():
     def setup(self):                                        # ゲーム開始時の処理をまとめた関数
         self.flag_count = 0                                 # 立てたフラグを数える
         self.is_first_open = True                           # 初期開始時のみの処理を行うためのフラグ
-        self.game_status = STAGE_START                      # ゲームの状態を指定
+        self.game_status = STAGE_START                      # ゲームの状態を開始準備状態にする
         self.create_stage()                                 # マップを生成する
         # print(self.stage_map)
         self.screen.fill(WHITE)                             # 画面を白で埋める
@@ -125,7 +124,7 @@ class Board():
         self.screen.blit(text, position)                    # 文字を転送する
         
     def start(self):                                        # ゲームの開始前の実行に係る処理
-        while self.game_status == STAGE_START:              # ゲームの状態がゲーム実行時なら。以下ループ
+        while self.game_status == STAGE_START:              # ゲームの状態が開始準備状態なら。以下ループ
             for event in pygame.event.get():                # イベント取得
                 if event.type == pygame.QUIT:               # 閉じるが押されたら
                     self.game_status = STAGE_QUIT           # ゲームの状態を終了状態にする
@@ -180,10 +179,9 @@ class Board():
                                 if i.is_flag:                               # フラグが立っていれば
                                     self.flag_count -= 1                    # フラグの数を1減らす
                                     self.user_map = i.unflag(self.user_map) # フラグを外す。地図の情報を書き換えるため、引数で渡して受け取る
-                                else:                                       # フラグが立っていなければ
-                                    if self.flag_count < self.NUM_MINES:    # フラグの数が上限に達していなければ
-                                        self.flag_count += 1                # フラグの数を1増やす
-                                        self.user_map = i.flag(self.user_map)   # フラグをつける。地図の情報を書き換えるため、引数で渡して受け取る
+                                elif self.flag_count < self.NUM_MINES:    # フラグの数が上限に達していなければ
+                                    self.flag_count += 1                # フラグの数を1増やす
+                                    self.user_map = i.flag(self.user_map)   # フラグをつける。地図の情報を書き換えるため、引数で渡して受け取る
             except:
                 pass
 
@@ -241,13 +239,13 @@ class Board():
             self.show_text("Press \"Space\" or Click to Restart", self.Y_CENTER + FONT_SIZE)    # 中央+FONT_SIZE下に表示
             pygame.display.flip()
     
-    def run(self):
-        while self.game_status != STAGE_QUIT:
-            if self.game_status == STAGE_START:
+    def run(self):                                              # main.pyから直接呼ばれる。ゲーム進行を管理・実行する関数
+        while self.game_status != STAGE_QUIT:                   # ゲームの状態が終了状態でなければ。以下無限ループ
+            if self.game_status == STAGE_START:                 # ゲームの状態が開始準備状態だったら
                 self.start()
-            if self.game_status == STAGE_GAME:
+            if self.game_status == STAGE_GAME:                  # ゲームの状態が開始状態だったら
                 self.game()
-            if self.game_status == STAGE_OVER:
+            if self.game_status == STAGE_OVER:                  # ゲームの状態がゲームオーバーだったら
                 self.over()
-            if self.game_status == STAGE_CLEAR:
+            if self.game_status == STAGE_CLEAR:                 # ゲームの状態がクリアだったら
                 self.clear()
