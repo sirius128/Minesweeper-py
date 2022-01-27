@@ -47,7 +47,7 @@ class Board():
             if np.count_nonzero(map<0) < self.NUM_MINES:    # 地雷の数が指定数に満たしていなければ
                 return configure_mines(self, map)           # 再起処理を行う
             else:                                           # 要件を満たしたら
-                print(map)
+                # print(map)
                 return map                                  # 作成した地図の配列を返す
 
         def count_mines(self, x, y):                        # 指定された座標の周囲に地雷が何個あるか数える
@@ -92,10 +92,10 @@ class Board():
                                     if x+i >= 0 and y+j >= 0 and x+i < self.NUM_WIDTH and y+j < self.NUM_HEIGHT:  # 参照先が範囲内
                                         # print("call open_next()", x+i, y+j)
                                         self.open_next(x+i, y+j)    # 指定した座標を開ける
-            else:
-                return
-        else:
-            return
+            else:                                           # 爆弾だったら
+                return                                      # 何もしない
+        else:                                               # 開いていれば
+            return                                          # 何もしない
     
     def setup(self):                                        # ゲーム開始時の処理をまとめた関数
         self.flag_count = 0                                 # 立てたフラグを数える
@@ -166,7 +166,7 @@ class Board():
                             if not i.is_flag:                               # フラグが立っていないことを確認
                                 if self.is_first_open:                      # 最初に開ける時のみ。空白を開けるようにする
                                     while self.stage_map[i.y][i.x] != 0:    # 指定した座標が0（空白）になるまで
-                                        print("create_stage")
+                                        # print("create_stage")
                                         self.create_stage()                 # マップの再生成を行う
                                     self.is_first_open = False              # 初回ではなくなるので、フラグを変更する
                                     
